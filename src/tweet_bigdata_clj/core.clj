@@ -35,19 +35,21 @@
   "カンマ分割"
   (csv/write-csv [[name screen-name text created-at]]))
 
-; sinceId でQueryを返してループ回す
-(defn get-tweets-all [#^QueryResult query]
+(def result-list (ref ()))
+
+(defn get-all-tweets [#^QueryResult query]
   (loop [q query]
     (when (.hasNext q)
       (Thread/sleep 5000)
-      (let [nq (.nextQuery q)
+      (let [nq (doto (.nextQuery q)
+                 (.setCount 100))
             nqr (.search twitter nq)]
-        (recur nqr))
-      )))
+        (dosync (alter result-list conj nqr))
+        (recur nqr)))))
 
 ;; repl ----------------------
-(def tweets (get-tweets "#zanmai"))
-(def map-val (tweets-to-map tweets))
+;(def tweets (get-tweets "#zanmai"))
+;(def map-val (tweets-to-map tweets))
 ;(def x (first map-val))
 
 ;(def text (->> map-val (map #(to-csv %))))
@@ -57,25 +59,35 @@
          (.setQuery "#zanmai")
          (.setCount 100)
          (.setUntil "2014-11-04")
-         (.setSince "2014-11-03")))
+         (.setSince "2014-11-03")
+         ))
 
 (def t (.search twitter q))
-(.hasNext t)
-(.nextQuery t)
-;(get-tweets-since t)
-(lazy-seq get-tweets-all t)
-;(.hasNext t)
-;(.nextQuery t)
-;(.getMaxId t)
-;(.getSinceId t)
-;(.sinceId q 529193567361564674)
+(time (get-all-tweets t))
+(def result (deref result-list))
+(count result)
+
+;(first (deref result-list))
 
 ;;---------------------------
 
+;(def data (map #(tweets-to-map (.getTweets %)) result))
+;(class data)
+;(:text (first (first data)))
 
+;(flatten data)
+(to-csvfile (map #(to-csv %) (flatten data)))
 
-(defn -main []
+#_(defn -main []
   (let [tweets (get-tweets "#zanmai")
         map-val (tweets-to-map tweets)
         text (->> map-val (map #(to-csv %)))]
     (to-csvfile text)))
+
+(defn -main []
+  (le[query (doto (Query.)
+              (.setQuery "#sm24830486")
+              (.setCount 100)
+              (.setUntil "2014-11-04")
+              (.setSince "2014-11-03"))
+      ]))
