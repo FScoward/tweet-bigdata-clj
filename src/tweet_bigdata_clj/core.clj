@@ -56,19 +56,18 @@
 ;(to-csvfile)
 
 (def q (doto (Query.)
-         (.setQuery "#zanmai")
+         (.setQuery "#sm24830486")
          (.setCount 100)
          (.setUntil "2014-11-04")
          (.setSince "2014-11-03")
          ))
 
-(def t (.search twitter q))
-(time (get-all-tweets t))
-(def result (deref result-list))
-(count result)
+;(def t (.search twitter q))
+;(time (get-all-tweets t))
+;(def result @result-list)
+;(count result)
 
 ;(first (deref result-list))
-
 ;;---------------------------
 
 ;(def data (map #(tweets-to-map (.getTweets %)) result))
@@ -76,7 +75,7 @@
 ;(:text (first (first data)))
 
 ;(flatten data)
-(to-csvfile (map #(to-csv %) (flatten data)))
+;(to-csvfile (map #(to-csv %) (flatten data)))
 
 #_(defn -main []
   (let [tweets (get-tweets "#zanmai")
@@ -84,10 +83,20 @@
         text (->> map-val (map #(to-csv %)))]
     (to-csvfile text)))
 
+(defn get-first-page [query]
+  (let [ q(.search twitter query)]
+    (dosync(alter result-list conj))
+    q))
+
 (defn -main []
-  (le[query (doto (Query.)
+  (let [query (doto (Query.)
               (.setQuery "#sm24830486")
               (.setCount 100)
               (.setUntil "2014-11-04")
               (.setSince "2014-11-03"))
-      ]))
+        first-page (get-first-page query)
+        rest-page (get-all-tweets first-page)
+        data (map #(tweets-to-map (.getTweets %)) @result-list)
+        flat-data (flatten data)
+      ]
+    (to-csvfile (map #(to-csv %) flat-data))))
